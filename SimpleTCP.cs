@@ -11,14 +11,19 @@ namespace STCP
 {
     class SimpleTCP
     {
+        TCPType tcpType;
         string serverIP = "127.0.0.1";
         int portNo = 5000;
         public Action<NetworkStream, RSACryptoServiceProvider, RSACryptoServiceProvider> Connected { get; set; }
+        public Action ConnectionFailed { get; set; }
         public SimpleTCP(TCPType tcpType, string serverIP = "127.0.0.1", int portNo = 5000)
         {
             this.serverIP = serverIP;
             this.portNo = portNo;
-
+            this.tcpType = tcpType;
+        }
+        public void Start()
+        {
             if (tcpType == TCPType.Server)
             {
                 _ = StartHost();
@@ -31,8 +36,16 @@ namespace STCP
 
         private void StartClient()
         {
-            TcpClient client = new TcpClient(serverIP, portNo);
-            _ = HandleConnectionFromClient(client);
+            try
+            {
+                TcpClient client = new TcpClient(serverIP, portNo);
+                _ = HandleConnectionFromClient(client);
+            }
+            catch (Exception)
+            {
+                ConnectionFailed();
+            }
+
         }
         private async Task StartHost()
         {
@@ -52,7 +65,7 @@ namespace STCP
         }
         private async Task HandleConnectionFromServer(TcpClient client)
         {
-            
+
             await Task.Run(() =>
             {
                 NetworkStream nwStream = client.GetStream();
@@ -61,7 +74,7 @@ namespace STCP
                 SendText(nwStream, cryptoBundleReceive.pubKeyString);
                 string sendPublicKey = ReadText(nwStream);
                 var cryptoSender = CreateRSACryptoServiceProviderFromString(sendPublicKey);
-                Connected(nwStream,cryptoSender,cryptoBundleReceive.provider);
+                Connected(nwStream, cryptoSender, cryptoBundleReceive.provider);
             });
         }
         private async Task HandleConnectionFromClient(TcpClient client)
@@ -73,12 +86,12 @@ namespace STCP
 
                 string sendPublicKey = ReadText(nwStream);
                 var cryptoSender = CreateRSACryptoServiceProviderFromString(sendPublicKey);
-                
+
                 SendText(nwStream, cryptoBundleReceive.pubKeyString);
 
 
                 Console.WriteLine("Connected");
-                Connected(nwStream,cryptoSender,cryptoBundleReceive.provider);
+                Connected(nwStream, cryptoSender, cryptoBundleReceive.provider);
             });
         }
         private RSACryptoBundle CreateRSACryptoServiceProvider()
@@ -105,7 +118,7 @@ namespace STCP
                 pubKeyString = sw.ToString();
             }
             return new RSACryptoBundle() { provider = csp, pubKeyString = pubKeyString };
-        } 
+        }
         private RSACryptoServiceProvider CreateRSACryptoServiceProviderFromString(string pubKeyString)
         {
             //converting it back
@@ -131,7 +144,7 @@ namespace STCP
         }
         public void SendText(NetworkStream networkStream, RSACryptoServiceProvider sender, string text)
         {
-            Send(networkStream,sender, Encoding.UTF8.GetBytes(text));
+            Send(networkStream, sender, Encoding.UTF8.GetBytes(text));
         }
         private void Send(NetworkStream networkStream, byte[] buffer, int offset = 0, int size = 0)
         {
@@ -148,7 +161,7 @@ namespace STCP
                 size = buffer.Length;
             }
             var bytesCypherText = sender.Encrypt(buffer.Skip(offset).Take(size).ToArray(), false);
-            networkStream.Write(bytesCypherText,0, bytesCypherText.Length);
+            networkStream.Write(bytesCypherText, 0, bytesCypherText.Length);
         }
         private string ReadText(NetworkStream networkStream)
         {
@@ -157,7 +170,7 @@ namespace STCP
         }
         public string ReadText(NetworkStream networkStream, RSACryptoServiceProvider receiver)
         {
-            byte[] buffer = Read(networkStream,receiver);
+            byte[] buffer = Read(networkStream, receiver);
             return Encoding.UTF8.GetString(buffer);
         }
         private byte[] Read(NetworkStream networkStream)
@@ -192,7 +205,7 @@ namespace STCP
                 endLength += recivedLength;
                 i++;
             }
-            return receiver.Decrypt(endBuffer.Take(endLength).ToArray(),false);
+            return receiver.Decrypt(endBuffer.Take(endLength).ToArray(), false);
         }
     }
     enum TCPType

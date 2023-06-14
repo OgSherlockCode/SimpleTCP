@@ -3,8 +3,7 @@ A Script To Simplify and SpeedUp TCP APP Development
 Hello World Example:<br>
 Server:<br>
 
-<code>
-static void Main(string[] args)
+        static void Main(string[] args)
         {
             simpleTCP = new SimpleTCP(TCPType.Server);
             simpleTCP.Connected = Connected;
@@ -17,11 +16,8 @@ static void Main(string[] args)
             simpleTCP.SendText(networkStream, sender, "Hello World!");
             Console.WriteLine(simpleTCP.ReadText(networkStream,reciever));
         }
-</code>
     
 Client:<br>
-    <code>
-        static SimpleTCP simpleTCP;
 
         static void Main(string[] args)
         {
@@ -42,4 +38,4 @@ Client:<br>
         {
             simpleTCP.Start();
         }
-    </code>
+
